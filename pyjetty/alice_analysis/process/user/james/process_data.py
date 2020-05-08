@@ -59,7 +59,8 @@ class ProcessData(process_base.ProcessBase):
 
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
-    io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle', is_pp=self.is_pp)
+    io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
+                              is_pp=self.is_pp, use_ev_id_ext=self.use_ev_id_ext)
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -100,6 +101,8 @@ class ProcessData(process_base.ProcessBase):
         self.is_pp = False
     else:
         self.is_pp = True
+        
+    self.use_ev_id_ext = config['use_ev_id_ext']
        
     self.observable_list = config['process_observables']
     
@@ -248,6 +251,10 @@ class ProcessData(process_base.ProcessBase):
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
   def analyze_event(self, fj_particles):
+  
+    # Perform constituent subtraction for each R_max (do this once, for all jetR)
+    if not self.is_pp:
+      fj_particles_subtracted = [self.constituent_subtractor[i].process_event(fj_particles) for i, R_max in enumerate(self.max_distance)]
     
     # Loop through jetR, and process event for each R
     for jetR in self.jetR_list:
@@ -275,7 +282,7 @@ class ProcessData(process_base.ProcessBase):
       else:
       
         for i, R_max in enumerate(self.max_distance):
-            
+                    
           if self.debug_level > 1:
             print('R_max: {}'.format(R_max))
             
@@ -283,13 +290,12 @@ class ProcessData(process_base.ProcessBase):
           self.fill_Rmax_indep_hists = (i == 0)
           
           # Perform constituent subtraction
-          fj_particles = self.constituent_subtractor[i].process_event(fj_particles)
           rho = self.constituent_subtractor[i].bge_rho.rho()
           if self.fill_R_indep_hists and self.fill_Rmax_indep_hists:
             getattr(self, 'hRho').Fill(rho)
           
           # Do jet finding (re-do each time, to make sure matching info gets reset)
-          cs = fj.ClusterSequence(fj_particles, jet_def)
+          cs = fj.ClusterSequence(fj_particles_subtracted[i], jet_def)
           jets = fj.sorted_by_pt(cs.inclusive_jets())
           jets_selected = jet_selector(jets)
           
