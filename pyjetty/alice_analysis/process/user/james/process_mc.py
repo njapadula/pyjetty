@@ -141,6 +141,7 @@ class ProcessMC(process_base.ProcessBase):
     self.fast_simulation = config['fast_simulation']
     self.dry_run = config['dry_run']
     self.skip_deltapt_RC_histograms = True
+    self.fill_RM_histograms = True
     
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
@@ -222,12 +223,13 @@ class ProcessMC(process_base.ProcessBase):
   # Initialize histograms
   #---------------------------------------------------------------
   def initialize_output_objects_R(self, jetR):
-        
-      name = 'hJES_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-      setattr(self, name, h)
       
       if self.is_pp:
+      
+          name = 'hJES_R{}'.format(jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+          setattr(self, name, h)
+      
           name = 'hDeltaR_All_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
@@ -235,6 +237,10 @@ class ProcessMC(process_base.ProcessBase):
       else:
       
           for R_max in self.max_distance:
+          
+            name = 'hJES_R{}_Rmax{}'.format(jetR, R_max)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+            setattr(self, name, h)
           
             name = 'hDeltaPt_emb_R{}_Rmax{}'.format(jetR, R_max)
             h = ROOT.TH2F(name, name, 300, 0, 300, 400, -200., 200.)
@@ -467,13 +473,14 @@ class ProcessMC(process_base.ProcessBase):
       suffix = ''
             
     # Create THn of response for theta_g
-    dim = 4;
-    title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-    nbins = [30, 20, 100, 100]
-    min = [0., 0., 0., 0.]
-    max = [150., 200., 1., 1.]
-    name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    self.create_thn(name, title, dim, nbins, min, max)
+    if self.fill_RM_histograms:
+      dim = 4;
+      title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
+      nbins = [30, 20, 100, 100]
+      min = [0., 0., 0., 0.]
+      max = [150., 200., 1., 1.]
+      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
+      self.create_thn(name, title, dim, nbins, min, max)
     
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0., 1., 200, -2., 2.)
@@ -493,13 +500,14 @@ class ProcessMC(process_base.ProcessBase):
       suffix = ''
     
     # Create THn of response for z_g
-    dim = 4;
-    title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-    nbins = [30, 20, 50, 50]
-    min = [0., 0., 0., 0.]
-    max = [150., 200., 0.5, 0.5]
-    name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    self.create_thn(name, title, dim, nbins, min, max)
+    if self.fill_RM_histograms:
+      dim = 4;
+      title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
+      nbins = [30, 20, 50, 50]
+      min = [0., 0., 0., 0.]
+      max = [150., 200., 0.5, 0.5]
+      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
+      self.create_thn(name, title, dim, nbins, min, max)
 
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     h = ROOT.TH3F(name, name, 20, 0, 200, 50, 0., 0.5, 200, -2., 2.)
@@ -871,6 +879,11 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   def fill_matching_histograms(self, jet_det, jetR, R_max):
       
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
+      
     if jet_det.has_user_info():
       jet_truth = jet_det.python_info().match
       
@@ -878,9 +891,8 @@ class ProcessMC(process_base.ProcessBase):
         
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
-        if self.is_pp or self.fill_Rmax_indep_hists:
-          JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-          getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
+        JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
+        getattr(self, 'hJES_R{}{}'.format(jetR, suffix)).Fill(jet_pt_truth_ungroomed, JES)
         
         if not self.is_pp:
         
@@ -1149,12 +1161,13 @@ class ProcessMC(process_base.ProcessBase):
   
     if grooming_setting in obs_grooming_settings:
 
-      x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth])
-      x_array = array('d', x)
-      name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
-      if not self.is_pp:
-        name += '_Rmax{}'.format(R_max)
-      getattr(self, name).Fill(x_array)
+      if self.fill_RM_histograms:
+        x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth])
+        x_array = array('d', x)
+        name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
+        if not self.is_pp:
+          name += '_Rmax{}'.format(R_max)
+        getattr(self, name).Fill(x_array)
         
       if obs_truth > 1e-5:
         obs_resolution = (obs_det - obs_truth) / obs_truth

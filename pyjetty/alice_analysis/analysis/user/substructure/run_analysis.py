@@ -814,14 +814,13 @@ class RunAnalysis(common_base.CommonBase):
         legend_label = ''
         for systematic in self.systematics_list:
           if systematic in h.GetName():
-            if systematic in ['prior1', 'prior2']:
-              legend_label = 'prior'
-            elif systematic in ['subtraction1', 'subtraction2']:
-              legend_label = 'subtraction'
-            else:
-              legend_label = systematic
+            legend_label = systematic
           elif 'RegParam' in h.GetName():
             legend_label = 'reg param'
+          elif 'prior' in h.GetName():
+            legend_label = 'prior'
+          elif 'subtraction' in h.GetName():
+            legend_label = 'subtraction'
         leg.AddEntry(h, legend_label, 'P')
 
     h_total.SetLineStyle(1)
@@ -948,7 +947,7 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def change_to_per(self, h):
 
-    for bin in range(0, h.GetNbinsX()):
+    for bin in range(0, h.GetNbinsX()+2):
       content = h.GetBinContent(bin)
       content_new = math.fabs(1-content)
       h.SetBinContent(bin, content_new*100)
