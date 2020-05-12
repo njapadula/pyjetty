@@ -10,9 +10,8 @@ git clone git@github.com:matplo/heppy.git
 cd ./heppy
 
 # we will build in virtualenv
+./scripts/pipenv_heppy.sh install numpy
 ./scripts/pipenv_heppy.sh --three shell
-pipenv install numpy
-
 # now build commands here... (root takes sometime)
 ./external/fastjet/build.sh
 ./external/lhapdf6/build.sh
@@ -106,7 +105,7 @@ PYTHIA8_DIR
 
 Most of those can be installed by simply using `pip install`
 - `numpy`
-- `yaml`
+- `pyyaml`
 - `argparse` - argument parsing
 - `tqdm` (Mateusz like's it - some others may be annoyed by it) - a progress bar
 - `uproot` - ROOT I/O in pure ROOT (in principle some of the deps on the compiled ROOT could be mitigated with this package alone)
@@ -127,7 +126,7 @@ Some third party - can ignore for the moment (MP uses it a lot):
 ... except the third party rootutils
 
 ```
-pip install numpy yaml argparse tqdm uproot pyhepmc_ng math ctypes shutil array joblib
+pip install numpy pyyaml argparse tqdm uproot pyhepmc_ng math ctypes shutil array joblib
 ```
 
 # Contributing
