@@ -4,12 +4,6 @@ import argparse
 import os
 import pyjetty.alihfjets.hf_data_io as hfdio
 from pyjetty.mputils import perror, pinfo, pwarning, treewriter
-from pyjetty.mputils import JetAnalysisWithRho
-
-import fastjet as fj
-import fjcontrib
-import fjext
-
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
@@ -24,36 +18,15 @@ class HFAnalysisInvMass(hfdio.HFAnalysis):
 		# self.hinvmasspt = ROOT.TH2F('hinvmasspt', 'hinvmasspt', 400, 1.5, 2.5, 50, 2, 12)
 		# self.hinvmasspt.Sumw2()
 		self.tw = treewriter.RTreeWriter(tree_name='d0', fout=self.fout)
-		# jet stuff
-
-		max_eta = 0.9
-		self.parts_selector = fj.SelectorPtMin(0.15) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(max_eta)
-
-		jet_R0 = 0.4
-		self.jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
-		self.jarho = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
+		
 
 	def analysis(self, df):
-		if len(df) <= 0:
-			return
-
-		_parts = self.parts_selector(self.fj_parts)
-
-		self.jarho.analyze_event(_parts)
-		_jets = self.jet_selector(self.jarho.jets)
-
-		self.tw.fill_branch('j', _jets)
-		self.tw.fill_branch('D0cand', self.fj_Dcands)
-
-		_dRs = [[j.delta_R(dc) for dc in self.fj_Dcands] for j in _jets]
-		self.tw.fill_branch('jDdR', _dRs, do_enumerate=True)
-
-		for c in df.columns:
-			if 'Particle' in c:
-				continue
-			self.tw.fill_branch(c, df[c].values)
-
-		self.tw.fill_tree()
+		for index, row in df.iterrows():
+			# self.hinvmass.Fill(row['inv_mass'])
+			# self.hinvmasspt.Fill(row['inv_mass'], row['pt_cand'])
+			for c in df.columns:
+				self.tw.fill_branch(c, row[c])
+			self.tw.fill_tree()
 				
 	def finalize(self):
 		self.fout.Write()
@@ -79,12 +52,16 @@ if __name__ == '__main__':
 	hfa.add_selection_range_abs('nsigTPC_Pi_1', 3)
 	hfa.add_selection_range_abs('nsigTPC_K_0', 3)
 	hfa.add_selection_range_abs('nsigTPC_K_1', 3)
-	hfa.add_selection_range_abs('nsigTOF_Pi_0', 3)
-	hfa.add_selection_range_abs('nsigTOF_Pi_1', 3)
-	hfa.add_selection_range_abs('nsigTOF_K_0', 3)
-	hfa.add_selection_range_abs('nsigTOF_K_1', 3)
+	hfa.add_selection_cond('nsigTOF_Pi_0', -900, 3)
+	hfa.add_selection_cond('nsigTOF_Pi_1', -900, 3)
+	hfa.add_selection_cond('nsigTOF_K_0', -900, 3)
+	hfa.add_selection_cond('nsigTOF_K_1', -900, 3)
+	#hfa.add_selection_range_abs('nsigTOF_Pi_0', 3)
+	#hfa.add_selection_range_abs('nsigTOF_Pi_1', 3)
+	#hfa.add_selection_range_abs('nsigTOF_K_0', 3)
+	#hfa.add_selection_range_abs('nsigTOF_K_1', 3)
 	# hfa.add_selection_range('d_len', 0.05, 1e3)
-	# hfa.add_selection_range('dca', 0.02, 1e3)
+	#hfa.add_selection_range('dca', 0.02, 1e3)
 
 	#hfa.add_selection_range('cos_p_xy', 0, 0.99)
 	#hfa.add_selection_range('d_len_xy', 0.1, 1e3)

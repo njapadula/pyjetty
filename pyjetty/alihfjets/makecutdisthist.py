@@ -8,6 +8,7 @@ import numpy as mp
 import ROOT
 import yaml
 import math
+ROOT.gROOT.SetBatch(True)
 
 from pyjetty.mputils import treereader
 
@@ -15,11 +16,12 @@ parser = argparse.ArgumentParser(description='D0 inv mass')
 parser.add_argument('-f', '--ifile', help='input rootfile', type=str, default=None, required=True)
 parser.add_argument('-e', '--energy', help='system energy', type=str, default='5TeV', required=False)
 parser.add_argument('-s', '--system', help='collision system', type=str, default='pp', required=False) 
+parser.add_argument('-t', '--trailer', help='information trailer', type=str, default='', required=False)
 args = parser.parse_args()
 
 main_dir = "/home/software/users/napadula/"
 root_dir = main_dir + "rootfiles/"
-ofile = "InvMassCutSelectionHists" + args.system + args.energy + ".root"
+ofile = "InvMassCutSelectionHists" + args.system + args.energy + args.trailer + ".root"
 
 root_filename = root_dir + ofile
 rootfile = ROOT.TFile(root_filename, 'RECREATE')
@@ -33,23 +35,24 @@ cut_type = ['greater', 'greater', 'less', 'abs', 'abs', 'abs', 'less', 'greater'
 cut_value = [0.6, 0.6, 0.03, 0.8, 0.1, 0.1, -0.0001, 0.9, 0]	
 
 pt_low = 5
-pt_high = 50
-pt_mid = 27.5
+pt_high = 100
 
 for n in range(len(cut_names)):
 	invmass_h.insert(n, ROOT.TH1F("InvMass_"+cut_names[n], "InvMass_"+cut_names[n], 45, 1.65, 2.10))
 	invmass_h[n].Sumw2()	
 
-f = ROOT.TFile.Open(args.ifile)
+f = ROOT.TFile(args.ifile, 'READ')
 d0 = f.Get("d0")
 
 for n in range(len(cut_names)-1):
-	d0.Draw(cut_names[n], "pt_cand>5", "goff")
+	this_cut = cut_names[n] + ' >> hnew'
+	d0.Draw(this_cut, "pt_cand>5", "goff")
+	hnew = ROOT.gROOT.FindObject('hnew')
+	hnew.SetDirectory(0)
 	cut_h.insert(n, ROOT.TH1F())
-	htemp = ROOT.gROOT.FindObject('htemp')
-	cut_h[n].Clone('htemp')
+	cut_h[n] = hnew.Clone()
+	cut_h[n].SetDirectory(0)
 	cut_h[n].SetName(cut_names[n]+"_dist")
-	cut_h[n].SetTitle(cut_names[n])	
 
 f.Close()
 
@@ -86,6 +89,8 @@ for i in range(tr.tree.GetEntries()):
 rootfile = ROOT.TFile(root_filename, 'UPDATE')
 for n in range(len(cut_names)-1):
 	invmass_h[n].Write()
-	#cut_h[n].Write()
+	cut_h[n].Write()
 invmass_h[len(cut_names)-1].Write()
+#hnew.Write()
+#cut_h.Write()
 rootfile.Close()

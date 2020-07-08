@@ -33,6 +33,11 @@ class HFAnalysis(MPBase):
 		self.query_strings.append('({} > {}) & ({} < {})'.format(what, -val, what, +val))
 		self.query_string = '(' + ' & '.join(self.query_strings) + ')'
 
+	def add_selection_cond(self, what, val1, val2):
+		self.selection.append([what, val1, val2, 3])
+		self.query_strings.append('((({} > {}) & ({} < {})) | ({} < {}))'.format(what, -val2, what, +val2, what, val1))
+		self.query_string = '(' + ' & '.join(self.query_strings) + ')'
+
 	def compile_selection(self, df):
 		self.df_selection = True
 		for c in self.selection:
@@ -42,6 +47,9 @@ class HFAnalysis(MPBase):
 				self.df_selection = (self.df_selection) & (df[c[0]] > c[1]) & (df[c[0]] < c[2])
 			if c[3] == 2:
 				self.df_selection = (self.df_selection) & (df[c[0]] > -c[1]) & (df[c[0]] < c[1])
+			if c[3] == 3:
+				self.df_selection = (self.df_selection) & (((df[c[0]] > -c[2]) & (df[c[0]] < c[2])) | (df[c[0]] <
+ c[1]))
 
 	def analyze(self, df):
 		self.compile_selection(df)

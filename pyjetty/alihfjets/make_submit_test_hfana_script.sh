@@ -2,22 +2,25 @@
 
 cpwd=${PWD}
 
-pp5TeVfiles=/rstorage/alice/data/LHC17pq/filelist.txt
+pp5TeVfiles=/rstorage/alice/data/LHC17pq/448/files.txt
+pp5TeVMCfiles=/rstorage/alice/data/LHC18b8/449/files.txt
+pp13TeVfiles=/rstorage/napadula/test_hfana/LHC18b_filelist.txt
 flist=${pp5TeVfiles}
 
 dname=$(date +"%Y-%m-%d-%H-%M")
 
 flistdname=$(dirname ${flist})
-outputdir=$(basename ${flistdname})
+#outputdir=$(basename ${flistdname})
+outputdir=LHC17pq
 outputdir=/rstorage/${USER}/test_hfana/${outputdir}/${dname}
 mkdir -pv ${outputdir}
 cd ${outputdir}
 pwd
 
 cp -v ${flist} .
-split --additional-suffix=.flist -d -l 5 -a 5 ${flist}
+split --additional-suffix=.flist -d -l 20 -a 5 ${flist}
 
-job_lists=$(find $PWD -name "*.flist")
+job_lists=$(find $PWD -name "*.flist" | sort)
 
 cp -v ${PYJETTY_DIR}/pyjetty/alihfjets/test_hfana.sh .
 cp -v ${PYJETTY_DIR}/pyjetty/alihfjets/test_hfana.py .
