@@ -51,9 +51,10 @@ class HFAnalysis(MPBase):
 				self.df_selection = (self.df_selection) & (((df[c[0]] > -c[2]) & (df[c[0]] < c[2])) | (df[c[0]] < c[1]))
 
 	def analyze(self, df):
-		self.compile_selection(df)
-		_df = df[self.df_selection]
-		self.analysis(_df)
+		#self.compile_selection(df)
+		#_df = df[self.df_selection]
+		#self.analysis(_df)
+		self.analysis(df)
 		if self.callback is not None:
 			self.callback(df['ev_id'].values[0])
 
@@ -70,7 +71,7 @@ class HFAnalysis(MPBase):
 
 class HFAnalysisIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(tree_name='PWGHF_TreeCreator/tree_D0')
+		self.configure_from_args(tree_name='PWGHF_TreeCreator/tree_event_char')
 		self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
 		super(HFAnalysisIO, self).__init__(**kwargs)
 		self.analyses = []
@@ -109,8 +110,8 @@ class HFAnalysisIO(MPBase):
 			return False
 		track_df_orig = track_tree.pandas.df()
 		# Merge event info into track tree
-		track_df = pd.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
-		self.track_df_grouped = track_df.groupby(['run_number','ev_id'])
+		track_df = pd.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])		
+		self.track_df_grouped = event_df.groupby(['z_vtx_reco'])
 		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
 		return True
 
