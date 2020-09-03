@@ -33,11 +33,16 @@ rootfile = ROOT.TFile(root_filename, 'RECREATE')
 rootfile.Close()
 
 cut_h = []
-branch_names = ['inv_mass', 'pt_cand', 'pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prong0', 'imp_par_prong1', 'imp_par_prod', 'cos_p']
-cut_names = ['pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prong0', 'imp_par_prong1', 'imp_par_prod', 'cos_p', 'allcuts']
-cut_type = ['greater', 'greater', 'less', 'abs', 'abs', 'abs', 'less', 'greater', 'all']
-cut_value = [0.6, 0.6, 0.03, 0.8, 0.1, 0.1, -0.0001, 0.9, 0]	
-how_many_cuts = 8
+#branch_names = ['inv_mass', 'pt_cand', 'pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prong0', 'imp_par_prong1', 'imp_par_prod', 'cos_p']
+#cut_names = ['pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prong0', 'imp_par_prong1', 'imp_par_prod', 'cos_p', 'allcuts']
+#cut_type = ['greater', 'greater', 'less', 'abs', 'abs', 'abs', 'less', 'greater', 'all']
+#cut_value = [0.6, 0.6, 0.03, 0.8, 0.1, 0.1, -0.0001, 0.9, 0]	
+#how_many_cuts = 8
+branch_names = ['inv_mass', 'pt_cand', 'pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prod', 'cos_p']
+cut_names = ['pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prod', 'cos_p', 'allcuts']
+cut_type = ['greater', 'greater', 'less', 'abs', 'less', 'greater', 'all']
+cut_value = [0.6, 0.6, 0.03, 0.8, -0.0001, 0.9, 0]	
+how_many_cuts = 6
 
 cut_string = '(pt_cand)>' + str(pt_low) + ', '
 
@@ -96,44 +101,37 @@ for i in range(tr.tree.GetEntries()):
 		if flag == how_many_cuts: 
 			invmass_h.Fill(tr.inv_mass[0])
 
-bgfunc = ROOT.TF1("bgfunc", "pol2", 1, 3)
-p1 = ROOT.TF1("p1", "pol2", 1.65, 1.8)
-#bgfunc = ROOT.TF1("bgfunc", "pol1", 1, 3)
-#p1 = ROOT.TF1("p1", "pol1", 1.65, 1.8)
+bgfunc = ROOT.TF1("bgfunc", "expo", 1, 3)
+p1 = ROOT.TF1("p1", "expo", 1.65, 1.8)
 g1 = ROOT.TF1("g1", "gaus", 1.82, 1.89)
-f1 = ROOT.TF1("f1", "pol2(0)+gaus(3)", 1.65, 2.1)
-#f1 = ROOT.TF1("f1", "pol1(0)+gaus(2)", 1.65, 2.1)
-#f1.SetParLimits(2, 0, 100000000)
-f1.SetParLimits(4, 1.855, 1.872)
-f1.SetParLimits(5, 0.005, 0.12)
-par = [0, 0, 0, 0, 0, 0]
-#f1.SetParLimits(3, 1.855, 1.872)
-#f1.SetParLimits(4, 0.005, 0.12)
-#par = [0, 0, 0, 0, 0]
+f1 = ROOT.TF1("f1", "expo(0)+gaus(2)", 1.65, 2.1)
+f1.SetParLimits(3, 1.864, 1.872)
+f1.SetParLimits(4, 0.01, 0.03)
+par = [0, 0, 0, 0, 0]
+
+print("entries: ", invmass_h.GetEntries())
+
+if (invmass_h.GetEntries()<15000):
+	print("Fitting with pol1")
+	p1.FixParameter(2, 0)
+	f1.FixParameter(2, 0)	
 
 invmass_h.Fit("p1","R")
-par[0:3] = [p1.GetParameter(0), p1.GetParameter(1), p1.GetParameter(2)]
-#par[0:2] = [p1.GetParameter(0), p1.GetParameter(1)]
+par[0:2] = [p1.GetParameter(0), p1.GetParameter(1)]
 invmass_h.Fit("g1","R")
-par[3:5] = [g1.GetParameter(0), g1.GetParameter(1), g1.GetParameter(2)]
-#par[2:4] = [g1.GetParameter(0), g1.GetParameter(1), g1.GetParameter(2)]
-f1.SetParameters(par[0], par[1], par[2], par[3], par[4], par[5])
+par[2:] = [g1.GetParameter(0), g1.GetParameter(1), g1.GetParameter(2)]
+f1.SetParameters(par[0], par[1], par[2], par[3], par[4])
 invmass_h.Fit("f1","R")
 
 polconst = f1.GetParameter(0)
 polslope = f1.GetParameter(1)
-polquad = f1.GetParameter(2)
-mean = f1.GetParameter(4)
-sigma = f1.GetParameter(5)
-mean_err = f1.GetParError(4)
-sig_err = f1.GetParError(5)
-#mean = f1.GetParameter(3)
-#sigma = f1.GetParameter(4)
-#mean_err = f1.GetParError(3)
-#sig_err = f1.GetParError(4)
+mean = f1.GetParameter(3)
+sigma = f1.GetParameter(4)
+mean_err = f1.GetParError(3)
+sig_err = f1.GetParError(4)
 
-bgfunc.SetParameters(polconst, polslope, polquad)
-#bgfunc.SetParameters(polconst, polslope)
+#bgfunc.SetParameters(polconst, polslope, polquad)
+bgfunc.SetParameters(polconst, polslope)
 
 bin_low = invmass_h.GetXaxis().FindBin(mean - 2*sigma)
 bin_high = invmass_h.GetXaxis().FindBin(mean + 2*sigma)
