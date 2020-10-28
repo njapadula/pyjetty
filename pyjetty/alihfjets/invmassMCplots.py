@@ -26,7 +26,7 @@ def make_var_hist(name, nbins, xarray):
 main_dir = "/home/software/users/napadula/"
 plot_dir = main_dir + "plots/"
 root_dir = main_dir + "rootfiles/"
-ofile = "InvMass_ptbins_" + args.energy + "_" + args.system + "_" + args.trailer + ".root"
+ofile = "InvMassMC_ptbins_" + args.energy + "_" + args.system + "_" + args.trailer + ".root"
 png = args.system + args.energy + args.trailer + ".png"
 
 nbins = 8
@@ -68,6 +68,10 @@ for p in range(len(pt_low)):
 
 	print(name)
 
+h_genD0_pt_yield = rootfile.Get("h_genD0_pt_yield")
+h_genD0_pt_yield.Sumw2()
+h_genD0_pt_yield.SetDirectory(0)
+
 rootfile.Close()
 
 for n in range(len(hnames)):
@@ -97,10 +101,6 @@ for p in range(nbins):
 	#f1.FixParameter(3, 1.868)
 	f1.SetParameters(par[0], par[1], par[2], 1.868, par[4])
 	h_invmass[p].Fit("f1","R")
-
-	rootfile = ROOT.TFile(root_filename, 'UPDATE')
-	h_invmass[p].Write()
-	rootfile.Close()	
 
 	polconst = f1.GetParameter(0)
 	polslope = f1.GetParameter(1)
@@ -211,7 +211,7 @@ cc.SaveAs(plot_dir + "yields_" + png)
 
 can = ROOT.TCanvas("can","can", 700, 700)
 hh = ROOT.TH1F("hh", "Signal over Background", 16, -0.5, 15.5)
-hh.GetYaxis().SetRangeUser(0, 5)
+hh.GetYaxis().SetRangeUser(0, 4)
 ROOT.gStyle.SetOptStat(0)
 hh.SetXTitle("pT")
 hh.SetYTitle("Signal/Background")

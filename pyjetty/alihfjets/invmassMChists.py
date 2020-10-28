@@ -21,7 +21,7 @@ args = parser.parse_args()
 main_dir = "/home/software/users/napadula/"
 plot_dir = main_dir + "plots/"
 root_dir = main_dir + "rootfiles/"
-ofile = "InvMass_ptbins_" + args.energy + "_" + args.system + "_" + args.trailer + ".root"
+ofile = "InvMassMC_ptbins_" + args.energy + "_" + args.system + "_" + args.trailer + ".root"
 png = args.system + args.energy + args.trailer + ".png"
 
 nbins = 8
@@ -35,6 +35,7 @@ rootfile = ROOT.TFile(root_filename, 'RECREATE')
 rootfile.Close()
 
 branch_names = ['inv_mass', 'pt_cand', 'pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prod', 'cos_p']
+gen_branch_names = ['pt_cand']
 cut_names = ['pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prod', 'cos_p']
 cut_type = ['greater', 'greater', 'less', 'abs', 'less', 'greater']
 cut_value_var = [[0.7, 0.7, 0.03, 0.8, -0.0002, 0.9],
@@ -69,6 +70,8 @@ def make_cut(d0tree, cut, type, value):
                         return True
         return False
 
+h_genD0_pt_yield = ROOT.TH1F("h_genD0_pt_yield", "h_genD0_pt_yield", nbins, pt_edge)
+h_genD0_pt_yield.Sumw2()
 
 for p in range(len(pt_low)):
 	name = "InvMass_{}_to_{}".format(pt_low[p],pt_high[p])
@@ -76,7 +79,6 @@ for p in range(len(pt_low)):
 	h_invmass[p].Sumw2()
 
 	print(name)
-
 
 tr = treereader.RTreeReader(tree_name='d0', branches = branch_names, file_name = args.ifile)
 	
@@ -92,9 +94,17 @@ for i in range(tr.tree.GetEntries()):
 					break
 			if flag:
 				h_invmass[n].Fill(tr.inv_mass[0])
+
+
+trg = treereader.RTreeReader(tree_name='d0_gen', branches = gen_branch_names, file_name = args.ifile)
+for i in range(trg.tree.GetEntries()):
+	trg.tree.GetEntry(i)
+	h_genD0_pt_yield.Fill(trg.pt_cand[0])
+
 			
 rootfile = ROOT.TFile(root_filename, 'UPDATE')
 for n in range(nbins):
 	h_invmass[n].Write()
+h_genD0_pt_yield.Write()
 rootfile.Close()
 

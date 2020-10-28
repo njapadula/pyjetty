@@ -2,7 +2,7 @@
 
 import argparse
 import os
-import pyjetty.alihfjets.hf_data_io as hfdio
+import pyjetty.alihfjets.hf_MC_io as hfdio
 from pyjetty.mputils import perror, pinfo, pwarning, treewriter
 import ROOT
 ROOT.gROOT.SetBatch(True)
@@ -13,20 +13,21 @@ class HFAnalysisInvMass(hfdio.HFAnalysis):
 		super(HFAnalysisInvMass, self).__init__(**kwargs)
 		self.fout = ROOT.TFile(self.name+'.root', 'recreate')
 		self.fout.cd()
-		# self.hinvmass = ROOT.TH1F('hinvmass', 'hinvmass', 400, 1.5, 2.5)
-		# self.hinvmass.Sumw2()
-		# self.hinvmasspt = ROOT.TH2F('hinvmasspt', 'hinvmasspt', 400, 1.5, 2.5, 50, 2, 12)
-		# self.hinvmasspt.Sumw2()
 		self.tw = treewriter.RTreeWriter(tree_name='d0', fout=self.fout)
+		self.tw_gen = treewriter.RTreeWriter(tree_name='d0_gen', fout=self.fout)
 		
 
 	def analysis(self, df):
 		for index, row in df.iterrows():
-			# self.hinvmass.Fill(row['inv_mass'])
-			# self.hinvmasspt.Fill(row['inv_mass'], row['pt_cand'])
 			for c in df.columns:
 				self.tw.fill_branch(c, row[c])
 			self.tw.fill_tree()
+
+	def analysis_gen(self, df):
+		for index, row in df.iterrows():
+			for c in df.columns:
+				self.tw_gen.fill_branch(c, row[c])
+			self.tw_gen.fill_tree()
 				
 	def finalize(self):
 		self.fout.Write()
@@ -43,15 +44,11 @@ if __name__ == '__main__':
 	hfaio = hfdio.HFAnalysisIO()
 
 	hfa = HFAnalysisInvMass(name = args.output)
-	#hfa.add_selection_range('pt_cand', 2, 1e3)
+	hfa.add_selection_range('pt_cand', 2, 1e3)
 	hfa.add_selection_range_abs('z_vtx_reco', 10)
-	#hfa.add_selection_range('pt_prong0', 0.5, 1e3)
-	#hfa.add_selection_range('pt_prong1', 0.5, 1e3)
+	hfa.add_selection_range('pt_prong0', 0.5, 1e3)
+	hfa.add_selection_range('pt_prong1', 0.5, 1e3)
 	hfa.add_selection_range_abs('eta_cand', 0.8)
-	hfa.add_selection_range('dca', -1, 0.03)
-	hfa.add_selection_range_abs('cos_t_star', 0.8)
-	hfa.add_selection_range('imp_par_prod', -1, -0.0001)
-	hfa.add_selection_range('cos_p', 0.9, 3)
 	hfa.add_selection_nsig('nsigTPC_Pi_0', 'nsigTOF_Pi_0', 'nsigTPC_K_1', 'nsigTOF_K_1', 'nsigTPC_Pi_1', 'nsigTOF_Pi_1', 'nsigTPC_K_0', 'nsigTOF_K_0', 3, -900)
 
 	hfaio.add_analysis(hfa)

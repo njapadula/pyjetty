@@ -52,9 +52,8 @@ class HFAnalysis(MPBase):
 				self.df_selection = (self.df_selection) & (df[c[0]] > c[1]) & (df[c[0]] < c[2])
 			if c[3] == 2:
 				self.df_selection = (self.df_selection) & (df[c[0]] > -c[1]) & (df[c[0]] < c[1])
-		#	if c[3] == 3:
-		#		self.df_selection = (self.df_selection) & ((df[c[0]] < 3 & df[c[0]] > -3) & ((df[c[1]] < 3 & df[c[1]] > -3) | df[c[1]] < -900))
-		#print (self.df_selection)
+			#if c[3] == 3:
+			#	self.df_selection = (self.df_selection) & (((df[c[0]] > -c[2]) & (df[c[0]] < c[2])) | (df[c[0]] < c[1]))
 
 	def analyze(self, df):
 		self.compile_selection(df)
@@ -68,6 +67,10 @@ class HFAnalysis(MPBase):
 		#print(self.query_string)
 		self.analysis(_df)
 
+	def analyze_gen(self, df):
+		_df = df
+		self.analysis_gen(_df)
+
 	# analysis on the single data frame
 	# this is something specific to user - overload this one
 	def analysis(self, df):
@@ -79,9 +82,12 @@ class HFAnalysisIO(MPBase):
 	def __init__(self, **kwargs):
 		self.configure_from_args(tree_name='PWGHF_TreeCreator/tree_D0')
 		self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
+		self.configure_from_args(gen_tree_name='PWGHF_TreeCreator/tree_D0_gen')
+		#self.gen_tree_name = 'PWGHF_TreeCreator/tree_D0_gen'
 		super(HFAnalysisIO, self).__init__(**kwargs)
 		self.analyses = []
 		self.track_df_grouped = None
+		self.d0_gen = None
 
 	def reset_analyses_list(self):
 		self.analyses = []
@@ -105,6 +111,18 @@ class HFAnalysisIO(MPBase):
 		event_df_orig.reset_index(drop=True)
 		event_df = event_df_orig.query('is_ev_rej == 0')
 		event_df.reset_index(drop=True)
+		# Load gen tree into df
+		try:
+			gen_tree = uproot.open(path)[self.gen_tree_name]
+		except:
+			pwarning('error getting', self.gen_tree_name, 'from file:', path)
+			return False
+		if not gen_tree:
+			perror('Tree {} not found in file {}'.format(gen_tree_name, path))
+			return False
+		gen_df_orig = gen_tree.pandas.df()
+		self.d0_gen = gen_df_orig.groupby(['run_number','ev_id'])
+		#gen_df = pd.merge(gen_df_orig, event_df, on=['run_number', 'ev_id'])
 		# Load track tree into dataframe
 		try:
 			track_tree = uproot.open(path)[self.tree_name]
@@ -117,12 +135,13 @@ class HFAnalysisIO(MPBase):
 		track_df_orig = track_tree.pandas.df()
 		# Merge event info into track tree
 		track_df = pd.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
+		#track_df = pd.merge(track_df_orig, gen_df, on=['run_number', 'ev_id'])
 		self.track_df_grouped = track_df.groupby(['run_number','ev_id'])
-		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
 		return True
 
 	def execute_analyses(self):
 		[self.track_df_grouped.apply(a.analyze_slower) for a in self.analyses]
+		[self.d0_gen.apply(a.analyze_gen) for a in self.analyses]
 
 	def update_status(self, mark):
 		if mark != self.pbar2_mark:
@@ -154,3 +173,4 @@ class HFAnalysisIO(MPBase):
 
 	def __def__(self):
 		self.track_df_grouped = None
+		self.d0_gen = None

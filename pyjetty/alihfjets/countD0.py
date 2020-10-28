@@ -19,7 +19,7 @@ parser.add_argument('-s', '--system', help='collision system', type=str, default
 parser.add_argument('-t', '--trailer', help='information trailer', type=str, default='', required=False)
 args = parser.parse_args()
 
-pt_low = 3
+pt_low = 2
 pt_high = 100
 
 main_dir = "/home/software/users/napadula/"
