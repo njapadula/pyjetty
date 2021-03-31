@@ -120,9 +120,9 @@ class HFAnalysisIO(MPBase):
 		if not gen_tree:
 			perror('Tree {} not found in file {}'.format(gen_tree_name, path))
 			return False
-		gen_df_orig = gen_tree.pandas.df()
-		self.d0_gen = gen_df_orig.groupby(['run_number','ev_id'])
-		#gen_df = pd.merge(gen_df_orig, event_df, on=['run_number', 'ev_id'])
+		gen_df_orig = gen_tree.pandas.df(['run_number', 'ev_id', 'pt_cand', 'eta_cand', 'cand_type'])
+		gen_df_orig.sort_values(by=['run_number','ev_id'], inplace=True)
+		df_genruns = gen_df_orig[['run_number','ev_id']].copy()
 		# Load track tree into dataframe
 		try:
 			track_tree = uproot.open(path)[self.tree_name]
@@ -132,10 +132,16 @@ class HFAnalysisIO(MPBase):
 		if not track_tree:
 			perror('Tree {} not found in file {}'.format(tree_name, path))
 			return False
-		track_df_orig = track_tree.pandas.df()
+		track_df_orig = track_tree.pandas.df(['run_number', 'ev_id', 'inv_mass', 'pt_cand', 'pt_prong0', 'pt_prong1', 'dca', 'cos_t_star', 'imp_par_prod', 'cos_p', 'cand_type', 'imp_par_prong0', 'imp_par_prong1', 'norm_dl_xy', 'eta_cand', 'nsigTPC_Pi_0', 'nsigTOF_Pi_0', 'nsigTPC_K_1', 'nsigTOF_K_1', 'nsigTPC_Pi_1', 'nsigTOF_Pi_1', 'nsigTPC_K_0', 'nsigTOF_K_0'])
 		# Merge event info into track tree
 		track_df = pd.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
-		#track_df = pd.merge(track_df_orig, gen_df, on=['run_number', 'ev_id'])
+		track_df.sort_values(by=['run_number','ev_id'], inplace=True)
+		df_d0runs = track_df[['run_number','ev_id']].copy()
+		df_runs = pd.merge(df_d0runs, df_genruns, on=['run_number','ev_id'])
+		df_runs.drop_duplicates(keep='first', inplace=True)
+		gen_df_orig = pd.merge(gen_df_orig, df_runs, on=['run_number','ev_id'])
+		track_df = pd.merge(track_df, df_runs, on=['run_number','ev_id'])
+		self.d0_gen = gen_df_orig.groupby(['run_number','ev_id'])
 		self.track_df_grouped = track_df.groupby(['run_number','ev_id'])
 		return True
 
